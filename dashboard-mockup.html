@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Revenue Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --ink:#1b1f27; --muted:#6b7280;
+    --line:#e6e8ec; --accent:#1f6feb; --accent2:#118a7e; --warn:#c2410c;
+    --pos:#15803d; --neg:#b91c1c; --grid:#eef0f3;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",-apple-system,system-ui,sans-serif;font-size:13px}
+  .top{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;background:linear-gradient(90deg,#11203a,#1f3a63);color:#fff}
+  .top h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+  .top .sub{font-size:11px;opacity:.8;margin-top:2px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .filters select{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);
+    border-radius:6px;padding:5px 9px;font-size:12px}
+  .filters select option{color:#111}
+  .wrap{padding:16px 22px;max-width:1280px;margin:0 auto}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:13px 15px;box-shadow:var(--shadow)}
+  .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .kpi .val{font-size:22px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .delta{font-size:11.5px;margin-top:4px;font-weight:600}
+  .delta.up{color:var(--pos)} .delta.down{color:var(--neg)}
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 2px;font-size:13px;font-weight:600}
+  .card .hint{font-size:11px;color:var(--muted);margin-bottom:10px}
+  .chartbox{position:relative;height:240px}
+  .chartbox.sm{height:200px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .bar{height:6px;border-radius:3px;background:var(--accent)}
+  .foot{font-size:10.5px;color:var(--muted);text-align:center;margin-top:16px}
+  .badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600}
+  .badge.cert{background:#e7f3ec;color:var(--pos);border:1px solid #bfe3cc}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <h1>Executive Revenue Dashboard <span class="badge cert">● Certified</span></h1>
+    <div class="sub">FY2023–FY2025 · Direct Lake semantic model · Refreshed daily 05:00 UTC</div>
+  </div>
+  <div class="filters">
+    <select id="fRegion"><option value="all">All Regions</option></select>
+    <select id="fProduct"><option value="all">All Products</option></select>
+    <select id="fYear">
+      <option value="all">All Years</option>
+      <option value="2023">FY2023</option>
+      <option value="2024">FY2024</option>
+      <option value="2025">FY2025</option>
+    </select>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Revenue vs Budget — Monthly Trend</h3>
+      <div class="hint">Actual revenue (bars) against budget (line). 3-month moving average overlaid.</div>
+      <div class="chartbox"><canvas id="trend"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Revenue by Region</h3>
+      <div class="hint">Share of total revenue</div>
+      <div class="chartbox"><canvas id="region"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Revenue by Product Line</h3>
+      <div class="hint">Drill-through enabled → product detail page</div>
+      <table id="prodTable"></table>
+    </div>
+    <div class="card">
+      <h3>Gross Margin % Trend</h3>
+      <div class="hint">(Revenue − Cost) ÷ Revenue, by month</div>
+      <div class="chartbox sm"><canvas id="margin"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Revenue by Segment & Channel</h3>
+      <div class="hint">Customer segment vs go-to-market channel</div>
+      <div class="chartbox sm"><canvas id="segchan"></canvas></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Mock executive report · data is synthetic · built to mirror a Power BI Direct Lake report layout
+    (KPI cards · trend with budget line · region donut · drill-through product table · margin trend · segment/channel)
+  </div>
+</div>
+
+<script>
+const D = {"months":["2023-01","2023-02","2023-03","2023-04","2023-05","2023-06","2023-07","2023-08","2023-09","2023-10","2023-11","2023-12","2024-01","2024-02","2024-03","2024-04","2024-05","2024-06","2024-07","2024-08","2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12"],
+"rev":[1800578,1808027,2271495,1911098,1825580,2107921,1783683,1717562,2083459,1707698,1732972,2132519,1954096,2128258,2554147,2029675,2056873,2369233,1948703,1957890,2294760,1943337,1909775,2381693,2349267,2350804,2794832,2450260,2293067,2740303,2125685,2191677,2462853,2058286,2194193,2616484],
+"cost":[975700,1039928,1281070,1070678,1053611,1140671,1048768,924329,1135372,996513,1025117,1247865,1073485,1166534,1434149,1163403,1193477,1278894,1097081,1149447,1324483,1105771,1059355,1333099,1246974,1315736,1576341,1372917,1220685,1535758,1231120,1194216,1427098,1230554,1224695,1489672],
+"bud":[1845000,1877942,2214000,1877942,1845000,2124000,1755000,1722058,2034000,1722058,1755000,2124000,2066400,2103295,2479680,2103295,2066400,2378880,1965600,1928705,2278080,1928705,1965600,2378880,2314368,2355691,2777242,2355691,2314368,2664346,2201472,2160149,2551450,2160149,2201472,2664346],
+"byRegion":{"North America":32274826,"EMEA":21540871,"APAC":15473528,"LATAM":7749516},
+"byProduct":{"Enterprise Suite":26410866,"Cloud Platform":20693538,"Support & Services":11430306,"Analytics Add-on":10792633,"Professional Services":7711398},
+"bySegment":{"Enterprise":38124290,"Mid-Market":27537151,"SMB":11377300},
+"byChannel":{"Direct":44827570,"Partner":22057902,"Online":10153269}};
+
+const fmt = n => '$' + (n>=1e6 ? (n/1e6).toFixed(1)+'M' : (n/1e3).toFixed(0)+'K');
+const fmtFull = n => '$'+Math.round(n).toLocaleString();
+const COL = ['#1f6feb','#118a7e','#c2410c','#7c3aed','#0891b2','#b45309'];
+
+// KPI computations
+const totalRev = D.rev.reduce((a,b)=>a+b,0);
+const totalCost = D.cost.reduce((a,b)=>a+b,0);
+const margin = (totalRev-totalCost)/totalRev;
+const rev2025 = D.rev.slice(24).reduce((a,b)=>a+b,0);
+const rev2024 = D.rev.slice(12,24).reduce((a,b)=>a+b,0);
+const yoy = (rev2025-rev2024)/rev2024;
+const totalBud = D.bud.reduce((a,b)=>a+b,0);
+const budVar = (totalRev-totalBud)/totalBud;
+const topProd = Object.entries(D.byProduct)[0];
+
+const kpis=[
+  {label:'Total Revenue',val:fmt(totalRev),delta:'FY23–FY25 cumulative',cls:''},
+  {label:'Revenue YoY',val:(yoy*100).toFixed(1)+'%',delta:'▲ FY25 vs FY24',cls:'up'},
+  {label:'Gross Margin',val:(margin*100).toFixed(1)+'%',delta:'across all periods',cls:'up'},
+  {label:'Budget Variance',val:(budVar*100).toFixed(1)+'%',delta:(budVar>=0?'▲ above':'▼ below')+' budget',cls:budVar>=0?'up':'down'},
+  {label:'Top Product',val:topProd[0].split(' ')[0],delta:fmt(topProd[1])+' rev',cls:''},
+];
+document.getElementById('kpis').innerHTML = kpis.map(k=>`
+  <div class="kpi"><div class="label">${k.label}</div>
+  <div class="val">${k.val}</div>
+  <div class="delta ${k.cls}">${k.delta}</div></div>`).join('');
+
+// 3-month moving average
+const mov = D.rev.map((_,i)=> i<2?null:(D.rev[i]+D.rev[i-1]+D.rev[i-2])/3);
+
+new Chart(document.getElementById('trend'),{
+  data:{labels:D.months,datasets:[
+    {type:'bar',label:'Revenue',data:D.rev,backgroundColor:'rgba(31,111,235,.85)',borderRadius:3,order:3},
+    {type:'line',label:'Budget',data:D.bud,borderColor:'#c2410c',borderDash:[5,4],borderWidth:2,pointRadius:0,order:1},
+    {type:'line',label:'3M Avg',data:mov,borderColor:'#118a7e',borderWidth:2,pointRadius:0,order:2},
+  ]},
+  options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmtFull(c.parsed.y)}}},
+    scales:{x:{ticks:{maxTicksLimit:12,font:{size:9}},grid:{display:false}},
+      y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:'#eef0f3'}}}}
+});
+
+new Chart(document.getElementById('region'),{
+  type:'doughnut',
+  data:{labels:Object.keys(D.byRegion),datasets:[{data:Object.values(D.byRegion),backgroundColor:COL,borderWidth:2,borderColor:'#fff'}]},
+  options:{maintainAspectRatio:false,cutout:'58%',
+    plugins:{legend:{position:'bottom',labels:{boxWidth:11,font:{size:11},padding:10}},
+      tooltip:{callbacks:{label:c=>c.label+': '+fmt(c.parsed)+' ('+(c.parsed/totalRev*100).toFixed(1)+'%)'}}}}
+});
+
+// product table with inline bars
+const maxP = Math.max(...Object.values(D.byProduct));
+document.getElementById('prodTable').innerHTML =
+  '<tr><th>Product Line</th><th class="num">Revenue</th><th style="width:90px">Share</th></tr>'+
+  Object.entries(D.byProduct).map(([k,v])=>`<tr>
+    <td>${k}</td><td class="num">${fmt(v)}</td>
+    <td><div class="bar" style="width:${(v/maxP*100).toFixed(0)}%"></div></td></tr>`).join('');
+
+new Chart(document.getElementById('margin'),{
+  type:'line',
+  data:{labels:D.months,datasets:[{label:'Margin %',
+    data:D.rev.map((r,i)=>((r-D.cost[i])/r*100)),
+    borderColor:'#118a7e',backgroundColor:'rgba(17,138,126,.12)',fill:true,borderWidth:2,pointRadius:0,tension:.3}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:c=>'Margin: '+c.parsed.y.toFixed(1)+'%'}}},
+    scales:{x:{ticks:{maxTicksLimit:6,font:{size:9}},grid:{display:false}},
+      y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'#eef0f3'}}}}
+});
+
+new Chart(document.getElementById('segchan'),{
+  type:'bar',
+  data:{labels:Object.keys(D.bySegment),datasets:[
+    {label:'Segment Rev',data:Object.values(D.bySegment),backgroundColor:'#1f6feb',borderRadius:3}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},
+    scales:{x:{ticks:{font:{size:10}},grid:{display:false}},
+      y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#eef0f3'}}}}
+});
+
+// populate filter dropdowns (cosmetic — mirrors Power BI slicers)
+Object.keys(D.byRegion).forEach(r=>fRegion.add(new Option(r,r)));
+Object.keys(D.byProduct).forEach(p=>fProduct.add(new Option(p,p)));
+</script>
+</body>
+</html>
