@@ -12,7 +12,8 @@
 
 | File | Purpose |
 |------|---------|
-| [`dashboard-mockup.html`](dashboard-mockup.html) | **Live interactive mock** of the report layout (open in a browser). Stands in for the `.pbix` screenshot — same visuals, real synthetic data. |
+| [`dashboard-mockup.html`](dashboard-mockup.html) | **Live interactive mock** of the report layout (open in a browser). Stands in for the `.pbix` screenshot — same visuals, real synthetic data. | <img width="1918" height="816" alt="image" src="https://github.com/user-attachments/assets/478a40c1-deaa-4ae5-b9ad-60dc6dd94ed1" />
+
 | [`dax/measures.dax`](dax/measures.dax) | Full DAX measure library: revenue, time intelligence, margin, budget variance, forecasting |
 | [`data/revenue_data.csv`](data/revenue_data.csv) | Synthetic source data (720 rows, FY2023–FY2025) |
 | [`generate_data.py`](generate_data.py) | Reproducible data generator |
