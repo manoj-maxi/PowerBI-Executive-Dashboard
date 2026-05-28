@@ -44,3 +44,6 @@ Open `dashboard-mockup.html` in any browser — no build step, charts render fro
 ## Results framing
 
 The layout follows executive-reporting best practice: top-line KPIs first, one primary trend visual, then supporting breakdowns — readable in under 10 seconds, with drill-through for analysts who need detail.
+
+<img width="1918" height="816" alt="image" src="https://github.com/user-attachments/assets/f471d7e9-04a0-4bec-8538-0bde8760e906" />
+
